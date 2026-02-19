@@ -91,6 +91,13 @@ def main(argv=None):
         bind(make_env, config),
         bind(make_logger, config),
         args)
+    
+  elif config.script == 'custom_eval':
+    embodied.run.custom_eval(
+        bind(make_agent, config),
+        bind(make_env, config),
+        bind(make_logger, config),
+        args)
 
   elif config.script == 'parallel':
     embodied.run.parallel.combined(
