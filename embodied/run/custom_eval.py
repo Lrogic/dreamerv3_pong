@@ -60,11 +60,26 @@ def custom_eval(make_agent, make_env, make_logger, args):
   cp.agent = agent
   cp.load(args.from_checkpoint, keys=['agent'])
 
+  embeds = []   # list of (B, D) arrays
+  acts_log = [] # optional: store actions too
+
+  def policy(carry, obs, **kwargs):
+      carry, act, outs = agent.policy(carry, obs, mode='eval')
+  
+      deter = np.array(outs['dyn/deter'])  # (B, 8192)
+      stoch = np.array(outs['dyn/stoch']).reshape(deter.shape[0], -1)  # (B, 32*64)
+      emb = np.concatenate([deter, stoch], axis=-1)  # (B, 10240)
+  
+      embeds.append(emb)
+      acts_log.append({k: np.array(v) for k, v in act.items()})
+      return carry, act, outs
+
+
   print('Start evaluation')
-  policy = lambda *args: agent.policy(*args, mode='eval')
+#   policy = lambda *args: agent.policy(*args, mode='eval')
   driver.reset(agent.init_policy)
   while step < args.steps:
-    driver(policy, steps=10)
+    driver(policy, steps=1)
     if should_log(step):
       logger.add(agg.result())
       logger.add(epstats.result(), prefix='epstats')
@@ -74,3 +89,5 @@ def custom_eval(make_agent, make_env, make_logger, args):
       logger.write()
 
   logger.close()
+  print(len(embeds))
+  print(embeds)
